@@ -1,30 +1,72 @@
 const apiResponse = require('../helper/ApiResponse');
-const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const userModel = require('../models/user');
-mongoose.set('strictQuery', false);
+const dbClient = require('./connection');
+const logger = require('../helper/Logger');
 class DataManager {
 
-    static async createUser() {
+
+    static async login(userDetail) {
         try {
-            var dbName = process.env.DB_NAME;
-            var dbUserName = process.env.DB_USER;
-            var dbPassword = process.env.DB_PASSWORD;
             var response = new apiResponse();
-            await mongoose.connect("mongodb+srv://" + dbUserName + ":" + dbPassword + "@mycluster.dhani.mongodb.net/" + dbName + "?retryWrites=true&w=majority", { useNewUrlParser: true, useUnifiedTopology: true });
-            const user = new userModel({
-                empName: "milan",
-                empEmail: "test@gmail.com",
-            });
-            let result = await user.save();
-            response.data = result;
+
+            // const obj = await dbClient();
+            var result = await userModel.findOne({ 'email': userDetail.email, 'password': userDetail.password });
+            //  obj.close();
+            if (result != null) {
+                let token = jwt.sign({ result }, process.env.JWT_SECRET, {
+                    algorithm: process.env.AUTH_ALGO,
+                    expiresIn: '1 day'
+                });
+                response.data = { user: result, token: token };
+            } else {
+                response.message = "Invalid credential";
+            }
+            response.status = result == null ? 1 : 0;
+
         } catch (e) {
-            console.log(e);
+            logger.debug(e);
             response.message = e;
         }
         return response;
     }
-
+    static async createUser(userDetail) {
+        try {
+            var response = new apiResponse();
+            const user = new userModel({
+                name: userDetail.name,
+                email: userDetail.email,
+                password: userDetail.password,
+            });
+            let result = await user.save();
+            response.data = result;
+        } catch (e) {
+            logger.debug(e);
+            response.message = e;
+        }
+        return response;
+    }
+    static async getAllUser() {
+        try {
+            let result = await userModel.find({});
+            response.data = result;
+        } catch (e) {
+            logger.debug(e);
+            response.message = e;
+        }
+        return response;
+    }
+    static async getSpecificUser(id) {
+        try {
+            var response = new apiResponse();
+            let result = await userModel.findById(id);
+            response.data = result;
+        } catch (e) {
+            logger.debug(e);
+            response.message = e;
+        }
+        return response;
+    }
 }
-
 module.exports = DataManager;

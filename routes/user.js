@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const userController = require("../controllers/user_controller");
 const userControllerValidator = require('../validations/user_controller_validator');
 userRouter.get("/", userController.getuser);
+userRouter.get("/:id", userController.getSpecificUser);
 userRouter.post("/", userControllerValidator.signUpValidation
     , (req, res) => {
         const errors = validationResult(req);
