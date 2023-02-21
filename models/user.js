@@ -1,7 +1,6 @@
-const { mongoose } = require('mongoose');
+const { mongoose, Schema } = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-
     name: {
         type: String,
         required: true,
@@ -15,6 +14,11 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    insertedOn: {
+        type: Date,
+        required: true
+    },
+    devices: [{ type: Schema.Types.ObjectId, ref: 'devices' }]
 }, {
     collection: 'users',
     versionKey: false

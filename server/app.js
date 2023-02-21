@@ -2,10 +2,18 @@ const express = require("express");
 const bodyParser = require('body-parser');
 const path = require("path");
 const cors = require("cors");
-const userRoute = require('./routes/user');
+const userRoute = require('../routes/user');
 const app = express();
-const auth = require('./middlewares/auth');
+const auth = require('../middlewares/auth');
 const { I18n } = require('i18n');
+
+/*
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+*/
+
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -32,7 +40,6 @@ app.use('/api/', auth);
 app.use('/api/user', userRoute);
 
 app.get('/', (req, res) => {
-    res.send(res.__('message'));
+    return "hello";
 });
-app.listen(3000, () => console.log(`Hello world app listening on port ${3000}!`))
 module.exports = app;

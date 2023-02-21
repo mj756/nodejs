@@ -1,8 +1,7 @@
 var jwt = require('jsonwebtoken');
 module.exports = function (req, res, next) {
-
     const ignoreRoutes = [
-        "/user/login", "/user", "/user/forgotpassword"
+        "/user/login", "/user/register", "/user/forgotpassword"
     ];
     if (ignoreRoutes.indexOf(req.url) >= 0) {
         next();
@@ -14,20 +13,17 @@ module.exports = function (req, res, next) {
             } catch (err) {
                 return res.status(401).json({
                     error: {
-                        msg: 'Failed to authenticate token!'
+                        msg: res.__('invalid_authorization')
                     }
                 });
             }
         } else {
             return res.status(401).json({
                 error: {
-                    msg: 'No token!'
+                    msg: res.__('invalid_authorization')
                 }
             });
         }
         next();
     }
-
-
-
 };

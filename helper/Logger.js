@@ -3,7 +3,7 @@ const DailyRotateFile = require('winston-daily-rotate-file');
 const logger = winston.createLogger({
     level: 'debug',
     maxsize: '500m',
-    format: winston.format.json(),
+    // format: winston.format.json(),
     transports: [
         // new winston.transports.File({ filename: './logs/ error.log' }),
         new DailyRotateFile({

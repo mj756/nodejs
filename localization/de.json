@@ -1,3 +1,4 @@
 {
-    "error":"interner Serverfehler"
+    "error":"interner Serverfehler",
+    "invalid_authorization":"Invalid authorization token"
 }
