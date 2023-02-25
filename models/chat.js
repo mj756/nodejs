@@ -13,6 +13,10 @@ const chatSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    messageType: {
+        type: String,
+        required: false,
+    },
     insertedOn: {
         type: Date,
         required: true

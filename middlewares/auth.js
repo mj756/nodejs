@@ -1,7 +1,7 @@
 var jwt = require('jsonwebtoken');
 module.exports = function (req, res, next) {
     const ignoreRoutes = [
-        "/user/login", "/user/register", "/user/forgotpassword"
+        "/user/login", "/user/register", "/user/forgotpassword", "/user/upload"
     ];
     if (ignoreRoutes.indexOf(req.url) >= 0) {
         next();

@@ -18,6 +18,10 @@ const userSchema = new mongoose.Schema({
         type: Date,
         required: true
     },
+    profileImage: {
+        type: String,
+        required: true
+    },
     devices: [{ type: Schema.Types.ObjectId, ref: 'devices' }]
 }, {
     collection: 'users',

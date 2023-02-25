@@ -54,5 +54,8 @@ userRouter.post("/forgotpassword", userControllerValidator.emailValidator, (req,
         userController.forgotPassword(req, res);
     }
 });
+userRouter.post("/upload", (req, res) => {
+    userController.uploadFile(req, res);
+});
 
 module.exports = userRouter;
