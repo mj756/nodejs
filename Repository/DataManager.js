@@ -9,27 +9,34 @@ const logger = require('../helper/Logger');
 const socket = require('socket.io');
 var users = [];
 class DataManager {
-
     static setSocket(server) {
         this.io = (socket)(server);
         const io = this.io;
-
         io.on('connection', function (socket) {
             if (this.socket == null) {
                 this.socket = socket;
             }
-
             socket.on('joinroom', () => {
                 socket.join('group');
             });
             socket.on('userReady', async (userDetail) => {
-                users.push({ id: userDetail.id, socketId: socket.id, name: userDetail.name, profileImage: userDetail.profileImage });
-                var userList = users.filter(e => e.socketId != socket.id);
-                if (userList != null && userList.length > 0) {
-                    io.to(socket.id).emit('userList', userList);
-                }
-                socket.broadcast.emit('newUser', { id: userDetail.id, socketId: socket.id, name: userDetail.name, profileImage: userDetail.profileImage });
+                io.to(socket.id).emit('userList', users);
+                users.push({
+                    name: userDetail.name,
+                    email: userDetail.email,
+                    profileImage: userDetail.profileImage,
+                    _id: userDetail._id,
+                    socketId: socket.id
+                });
+                socket.broadcast.emit('newUser', {
+                    name: userDetail.name,
+                    email: userDetail.email,
+                    profileImage: userDetail.profileImage,
+                    _id: userDetail._id,
+                    socketId: socket.id
+                });
             })
+
             socket.on('getMessage', async function (message) {
                 var result = await DataManager.getMessageBetweenTwoPerson(message);
                 if (result.data != null) {
@@ -39,12 +46,11 @@ class DataManager {
             socket.on('disconnect', () => {
                 var index = users.findIndex((obj) => obj.socketId == socket.id);
                 if (index != null && index >= 0) {
-                    socket.broadcast.emit('userLeave', { id: users[index].id, socketId: socket.id });
+                    socket.broadcast.emit('userLeave', users[index]);
                     users.splice(index, 1);
                 }
             })
             socket.on('groupMessage', async function (data) {
-
                 socket.broadcast.to('group').emit('message', data);
             })
             socket.on('message', async function (data) {
@@ -63,13 +69,12 @@ class DataManager {
                     messageType: 'text',
                     insertedOn: model.insertedOn
                 }
-                var index = users.findIndex((obj) => obj.id == data.receiver);
-                if (index != null && index >= 0) {
-                    io.to(users[index].socketId).emit('message', chat);
-                    //  const obj = await dbClient.connect();
-                    await model.save();
-                    //   obj.close();
-                }
+                users.forEach((row, index) => {
+                    if (row._id == data.receiver) {
+                        io.to(users[index].socketId).emit('message', chat);
+                    }
+                });
+                await model.save();
             })
 
             socket.on('loginRequest', async (data) => {
@@ -86,7 +91,6 @@ class DataManager {
                     name: data.name,
                     email: data.email,
                     password: data.password,
-
                 }
                 var result = await DataManager.createUser(userDetail);
                 io.to(socket.id).emit('registerResult', result
@@ -161,7 +165,7 @@ class DataManager {
         var response = new apiResponse();
         try {
             // const obj = await dbClient.connect();
-            let result = await userModel.find({}).select('name email');
+            let result = await userModel.find({}).select('name email profileImage');
             //  obj.close();
             response.data = result;
         } catch (e) {
@@ -214,7 +218,6 @@ class DataManager {
         return response;
     }
 
-
     static async getMessageBetweenTwoPerson(messageDetail) {
         var response = new apiResponse();
         try {
@@ -229,7 +232,6 @@ class DataManager {
             //   obj.close();
         } catch (e) {
             logger.error(e.stack);
-            console.log(e.stack);
             response.message = 'Internal server error';
         }
         return response;
