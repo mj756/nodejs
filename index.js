@@ -6,18 +6,31 @@ const server = http.createServer();
 const io = new Server(server, {
   cors: {
     origin: '*'
-  }
+  },
+  // 1 MB chunks, so 2 MB is plenty of room
+  maxHttpBufferSize: 2 * 1024 * 1024
 });
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+const MAX_CHUNK_SIZE = 1024 * 1024;  
 
 const PORT = process.env.PORT || 3000;
 
 const users = new Map();
 const rooms = new Map();
-
+const fileTransfers = new Map();
 
 // --------------------------------------------------
 // Helpers
 // --------------------------------------------------
+function getUserByUserId(userId) {
+  for (const user of users.values()) {
+    if (user.userId === userId) {
+      return user;
+    }
+  }
+
+  return null;
+}
 
 function getUser(socketId) {
   return users.get(socketId) || null;
@@ -291,6 +304,748 @@ io.on('connection', (socket) => {
       return;
     }
   });
+
+
+
+  socket.on('fileStart', (data = {}) => {
+
+    try {
+
+      const {
+        uploadId,
+        senderId,
+        receiverId,
+        fileName,
+        fileSize,
+        fileType
+      } = data;
+
+
+      // -----------------------------------------------
+      // Validate data
+      // -----------------------------------------------
+
+      if (
+        !uploadId ||
+        !senderId ||
+        !receiverId ||
+        !fileName ||
+        !Number.isInteger(fileSize)
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Invalid file information'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Validate file size
+      // -----------------------------------------------
+
+      if (
+        fileSize <= 0 ||
+        fileSize > MAX_FILE_SIZE
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Maximum file size is 50 MB'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Verify sender
+      // -----------------------------------------------
+
+      const sender = getUser(socket.id);
+
+      if (
+        !sender ||
+        sender.userId !== senderId
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Unauthorized sender'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Find receiver
+      // -----------------------------------------------
+
+      const receiver =
+        getUserByUserId(receiverId);
+
+      if (!receiver) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Receiver is offline'
+          }
+        );
+      }
+
+
+      const receiverSocket =
+        io.sockets.sockets.get(
+          receiver.id
+        );
+
+      if (!receiverSocket) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Receiver is offline'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Duplicate upload
+      // -----------------------------------------------
+
+      if (fileTransfers.has(uploadId)) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Upload already exists'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Store metadata ONLY
+      // -----------------------------------------------
+
+      fileTransfers.set(
+        uploadId,
+        {
+          uploadId,
+
+          senderId,
+          senderSocketId: socket.id,
+
+          receiverId,
+          receiverSocketId: receiver.id,
+
+          fileName,
+          fileSize,
+          fileType:
+            fileType ||
+            'application/octet-stream',
+
+          nextChunkIndex: 0,
+          receivedBytes: 0,
+
+          waitingForReceiverAck: false,
+
+          createdAt: Date.now()
+        }
+      );
+
+
+      // -----------------------------------------------
+      // Notify receiver
+      // -----------------------------------------------
+
+      receiverSocket.emit(
+        'fileStart',
+        {
+          uploadId,
+          senderId,
+          fileName,
+          fileSize,
+          fileType:
+            fileType ||
+            'application/octet-stream'
+        }
+      );
+
+
+      // -----------------------------------------------
+      // Notify sender
+      // -----------------------------------------------
+
+      socket.emit(
+        'fileStartAck',
+        {
+          uploadId,
+          chunkSize: MAX_CHUNK_SIZE
+        }
+      );
+
+    } catch (error) {
+
+      console.error(
+        'fileStart error:',
+        error
+      );
+
+      socket.emit(
+        'fileError',
+        {
+          uploadId: data.uploadId,
+          error: 'Failed to start file transfer'
+        }
+      );
+    }
+  });
+
+
+  // ====================================================
+  // FILE CHUNK
+  // ====================================================
+
+  socket.on('fileChunk', (data = {}) => {
+
+    try {
+
+      const {
+        uploadId,
+        chunkIndex,
+        chunk
+      } = data;
+
+
+      const transfer =
+        fileTransfers.get(uploadId);
+
+
+      if (!transfer) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Upload not found'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Verify sender
+      // -----------------------------------------------
+
+      if (
+        transfer.senderSocketId !== socket.id
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Unauthorized sender'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Only one chunk in flight
+      // -----------------------------------------------
+
+      if (
+        transfer.waitingForReceiverAck
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error:
+              'Previous chunk has not been acknowledged'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Validate chunk order
+      // -----------------------------------------------
+
+      if (
+        chunkIndex !==
+        transfer.nextChunkIndex
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error:
+              `Expected chunk ${transfer.nextChunkIndex}`
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Validate chunk
+      // -----------------------------------------------
+
+      if (!chunk) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Empty chunk'
+          }
+        );
+      }
+
+
+      const chunkSize =
+        Buffer.isBuffer(chunk)
+          ? chunk.length
+          : chunk.byteLength;
+
+
+      if (
+        chunkSize <= 0 ||
+        chunkSize > MAX_CHUNK_SIZE
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Invalid chunk size'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Check total file size
+      // -----------------------------------------------
+
+      if (
+        transfer.receivedBytes +
+        chunkSize >
+        transfer.fileSize
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'File size exceeded'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Get receiver
+      // -----------------------------------------------
+
+      const receiverSocket =
+        io.sockets.sockets.get(
+          transfer.receiverSocketId
+        );
+
+
+      if (!receiverSocket) {
+
+        fileTransfers.delete(uploadId);
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Receiver disconnected'
+          }
+        );
+      }
+
+
+      // -----------------------------------------------
+      // Mark waiting for receiver ACK
+      // -----------------------------------------------
+
+      transfer.waitingForReceiverAck = true;
+
+
+      // -----------------------------------------------
+      // FORWARD CHUNK
+      //
+      // The server does NOT save the chunk.
+      // -----------------------------------------------
+
+      receiverSocket.emit(
+        'fileChunk',
+        {
+          uploadId,
+          chunkIndex,
+          chunk
+        }
+      );
+
+    } catch (error) {
+
+      console.error(
+        'fileChunk error:',
+        error
+      );
+
+      socket.emit(
+        'fileError',
+        {
+          uploadId: data.uploadId,
+          error: 'Failed to process file chunk'
+        }
+      );
+    }
+  });
+
+
+  // ====================================================
+  // RECEIVER CHUNK ACK
+  // ====================================================
+
+  socket.on(
+    'fileChunkReceived',
+    (data = {}) => {
+
+      const {
+        uploadId,
+        chunkIndex,
+        chunkSize
+      } = data;
+
+
+      const transfer =
+        fileTransfers.get(uploadId);
+
+
+      if (!transfer) {
+        return;
+      }
+
+
+      // -----------------------------------------------
+      // Only receiver can ACK
+      // -----------------------------------------------
+
+      if (
+        transfer.receiverSocketId !==
+        socket.id
+      ) {
+
+        return;
+      }
+
+
+      // -----------------------------------------------
+      // Validate chunk index
+      // -----------------------------------------------
+
+      if (
+        chunkIndex !==
+        transfer.nextChunkIndex
+      ) {
+
+        return;
+      }
+
+
+      // -----------------------------------------------
+      // Validate chunk size
+      // -----------------------------------------------
+
+      if (
+        !Number.isInteger(chunkSize) ||
+        chunkSize <= 0 ||
+        chunkSize > MAX_CHUNK_SIZE
+      ) {
+
+        return;
+      }
+
+
+      // -----------------------------------------------
+      // Update transfer
+      // -----------------------------------------------
+
+      transfer.receivedBytes +=
+        chunkSize;
+
+      transfer.nextChunkIndex++;
+
+      transfer.waitingForReceiverAck =
+        false;
+
+
+      // -----------------------------------------------
+      // Get sender
+      // -----------------------------------------------
+
+      const senderSocket =
+        io.sockets.sockets.get(
+          transfer.senderSocketId
+        );
+
+
+      if (!senderSocket) {
+
+        fileTransfers.delete(
+          uploadId
+        );
+
+        return;
+      }
+
+
+      // -----------------------------------------------
+      // Tell sender to send next chunk
+      // -----------------------------------------------
+
+      senderSocket.emit(
+        'fileChunkAck',
+        {
+          uploadId,
+          chunkIndex,
+
+          receivedBytes:
+            transfer.receivedBytes,
+
+          progress:
+            Math.round(
+              (
+                transfer.receivedBytes /
+                transfer.fileSize
+              ) * 100
+            )
+        }
+      );
+    }
+  );
+
+
+  // ====================================================
+  // FILE END
+  // ====================================================
+
+  socket.on(
+    'fileEnd',
+    (data = {}) => {
+
+      const {
+        uploadId
+      } = data;
+
+
+      const transfer =
+        fileTransfers.get(uploadId);
+
+
+      if (!transfer) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Upload not found'
+          }
+        );
+      }
+
+
+      // Only sender
+      if (
+        transfer.senderSocketId !==
+        socket.id
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Unauthorized sender'
+          }
+        );
+      }
+
+
+      // Last chunk must be ACKed
+      if (
+        transfer.waitingForReceiverAck
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error:
+              'Last chunk has not been acknowledged'
+          }
+        );
+      }
+
+
+      // Make sure entire file arrived
+      if (
+        transfer.receivedBytes !==
+        transfer.fileSize
+      ) {
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error:
+              'File transfer incomplete'
+          }
+        );
+      }
+
+
+      const receiverSocket =
+        io.sockets.sockets.get(
+          transfer.receiverSocketId
+        );
+
+
+      if (!receiverSocket) {
+
+        fileTransfers.delete(
+          uploadId
+        );
+
+        return socket.emit(
+          'fileError',
+          {
+            uploadId,
+            error: 'Receiver disconnected'
+          }
+        );
+      }
+
+
+      // Tell receiver file is complete
+      receiverSocket.emit(
+        'fileEnd',
+        {
+          uploadId,
+
+          fileName:
+            transfer.fileName,
+
+          fileSize:
+            transfer.fileSize,
+
+          fileType:
+            transfer.fileType
+        }
+      );
+
+
+      // Tell sender
+      socket.emit(
+        'fileComplete',
+        {
+          uploadId
+        }
+      );
+
+
+      // Remove metadata
+      fileTransfers.delete(
+        uploadId
+      );
+    }
+  );
+
+
+  // ====================================================
+  // CANCEL FILE
+  // ====================================================
+
+  socket.on(
+    'fileCancel',
+    (data = {}) => {
+
+      const {
+        uploadId
+      } = data;
+
+
+      const transfer =
+        fileTransfers.get(uploadId);
+
+
+      if (!transfer) {
+        return;
+      }
+
+
+      // Only sender or receiver
+      // can cancel
+      if (
+        transfer.senderSocketId !==
+          socket.id &&
+        transfer.receiverSocketId !==
+          socket.id
+      ) {
+
+        return;
+      }
+
+
+      const otherSocketId =
+        transfer.senderSocketId === socket.id
+          ? transfer.receiverSocketId
+          : transfer.senderSocketId;
+
+
+      const otherSocket =
+        io.sockets.sockets.get(
+          otherSocketId
+        );
+
+
+      if (otherSocket) {
+
+        otherSocket.emit(
+          'fileCancel',
+          {
+            uploadId
+          }
+        );
+      }
+
+
+      fileTransfers.delete(
+        uploadId
+      );
+    }
+  );
+
+
 
 
   // ------------------------------------------------
