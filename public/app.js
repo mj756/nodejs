@@ -247,9 +247,10 @@
       return;
     }
 
-    const serverUrl = window.location.port === '3000' 
-      ? window.location.origin 
-      : 'http://localhost:3000';
+    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const serverUrl = isLocalDev && window.location.port === '8080' 
+      ? 'http://localhost:3000' 
+      : window.location.origin;
 
     console.log('[Socket] Connecting to:', serverUrl);
 
