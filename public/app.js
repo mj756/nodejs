@@ -951,7 +951,10 @@
       state.chatLogs.get(targetKey).push(messageObj);
       appendMessageToDOM(messageObj);
 
-      const targetEmail = state.activeChat.targetEmail || (state.users.get(targetKey) ? state.users.get(targetKey).userId : targetKey);
+      const targetUser = state.users.get(targetKey);
+      const targetEmail = (targetUser ? (targetUser.email || targetUser.userId || targetUser.id) : null) || state.activeChat.targetEmail || targetKey;
+      const senderUserEmail = state.currentUser.email || state.currentUser.userId || state.currentUser.socketId;
+
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
       state.activeUploads.set(uploadId, {
@@ -964,7 +967,7 @@
 
       state.socket.emit('fileStart', {
         uploadId: uploadId,
-        senderId: state.currentUser.email,
+        senderId: senderUserEmail,
         receiverId: targetEmail,
         fileName: file.name,
         fileSize: file.size,

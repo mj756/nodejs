@@ -35,8 +35,9 @@ const fileTransfers = new Map();
 // Helpers
 // --------------------------------------------------
 function getUserByUserId(userId) {
+  if (!userId) return null;
   for (const user of users.values()) {
-    if (user.userId === userId) {
+    if (user.userId === userId || user.email === userId || user.id === userId) {
       return user;
     }
   }
@@ -53,9 +54,13 @@ function getRoom(roomName) {
 }
 
 function createUser(socket, data = {}) {
+  const userEmail = data.email || data.userId || data.id || socket.id;
   return {
     ...data,
-    id: socket.id
+    userId: userEmail,
+    email: userEmail,
+    id: socket.id,
+    socketId: socket.id
   };
 }
 
@@ -383,9 +388,8 @@ io.on('connection', (socket) => {
 
       if (
         !sender ||
-        sender.userId !== senderId
+        (sender.userId !== senderId && sender.email !== senderId && sender.id !== senderId)
       ) {
-
         return socket.emit(
           'fileError',
           {
