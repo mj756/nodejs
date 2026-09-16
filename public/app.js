@@ -556,7 +556,14 @@
         <div class="chat-message-wrapper d-flex flex-column ${isOutgoing ? 'align-items-end' : 'align-items-start'}" style="max-width: 65%;">
           <div class="chat-message-text" style="background: ${bubbleBg}; color: ${textColor}; padding: 10px 16px; border-radius: 8px; display: inline-block; width: fit-content; max-width: 100%; word-break: break-word;">
             ${msg.text ? `<p class="mb-0 status-title-text">${msg.text}</p>` : ''}
-            ${msg.image ? `<img src="${msg.image}" class="img-fluid rounded mt-2" style="max-height: 250px; display: block;">` : ''}
+            ${msg.image ? `
+              <div class="mt-2">
+                <img src="${msg.image}" class="img-fluid rounded" style="max-height: 250px; display: block;">
+                <a href="${msg.image}" download="image_${Date.now()}.png" class="btn btn-sm btn-primary mt-2 d-inline-flex align-items-center gap-1">
+                  <i class="icon-base ti tabler-download fs-6"></i> Download Image
+                </a>
+              </div>
+            ` : ''}
             ${msg.isFile ? `
               <div class="p-2 rounded bg-white text-dark border mt-1">
                 <div class="fw-semibold small">${msg.fileName}</div>
@@ -612,12 +619,19 @@
           img.style.maxHeight = '250px';
           img.style.display = 'block';
           parent.appendChild(img);
+
+          const a = document.createElement('a');
+          a.href = fileUrl;
+          a.download = fileName;
+          a.className = 'btn btn-sm btn-primary mt-2 d-inline-flex align-items-center gap-1';
+          a.innerHTML = '<i class="icon-base ti tabler-download fs-6"></i> Download Image';
+          parent.appendChild(a);
         } else {
           const a = document.createElement('a');
           a.href = fileUrl;
           a.download = fileName;
-          a.className = 'btn btn-sm btn-primary mt-2';
-          a.textContent = 'Download File';
+          a.className = 'btn btn-sm btn-primary mt-2 d-inline-flex align-items-center gap-1';
+          a.innerHTML = '<i class="icon-base ti tabler-download fs-6"></i> Download File';
           parent.appendChild(a);
         }
       }

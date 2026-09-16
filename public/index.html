@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-  <title>Vuexy - Chat & Authentication</title>
+  <title>Smart Chat - Realtime Messaging</title>
   
   <link rel="icon" type="image/svg+xml" href="/assets/img/favicon/favicon.svg">
 
@@ -33,7 +33,7 @@
   <div class="app-container">
 
     <!-- ==================================================================== -->
-    <!-- VIEW 1: VUEXY LOGIN SCREEN                                           -->
+    <!-- VIEW 1: SMART CHAT LOGIN SCREEN                                      -->
     <!-- ==================================================================== -->
     <div id="login-view" class="spa-view active">
       <div class="auth-page-container">
@@ -42,15 +42,25 @@
           <div class="app-brand justify-content-center mb-4">
             <a href="#" class="app-brand-link">
               <span class="app-brand-logo demo">
-                <svg width="32" height="22" viewBox="0 0 32 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path fill-rule="evenodd" clip-rule="evenodd" d="M0.00172773 0V6.85398C0.00172773 6.85398 -0.133178 9.01207 1.98092 10.8388L13.6912 21.9964L19.7809 21.9964L31.898 10.8388C34.0121 9.01207 33.8772 6.85398 33.8772 6.85398V0H0.00172773Z" fill="#7367F0"/>
+                <svg width="34" height="34" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#7367f0" />
+                      <stop offset="100%" stop-color="#9e95f5" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="64" height="64" rx="16" fill="url(#brandGrad)" />
+                  <path d="M 20 20 C 14 20 12 24 12 30 C 12 36 16 40 22 40 L 22 47 L 29 40 L 44 40 C 50 40 52 36 52 30 C 52 24 48 20 42 20 Z" fill="#ffffff" />
+                  <circle cx="24" cy="30" r="3" fill="#7367f0" />
+                  <circle cx="32" cy="30" r="3" fill="#7367f0" />
+                  <circle cx="40" cy="30" r="3" fill="#7367f0" />
                 </svg>
               </span>
-              <span class="app-brand-text demo menu-text fw-bold text-heading ms-2">Vuexy</span>
+              <span class="app-brand-text demo menu-text fw-bold text-heading ms-2 fs-3">Smart Chat</span>
             </a>
           </div>
 
-          <h4 class="mb-1 text-center text-heading fw-bold">Welcome to Vuexy! 👋</h4>
+          <h4 class="mb-1 text-center text-heading fw-bold">Welcome to Smart Chat! 👋</h4>
           <p class="mb-4 text-center text-body-secondary" style="font-size:0.875rem;">Enter your details to join real-time chat</p>
 
           <form id="login-form" novalidate>
