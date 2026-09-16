@@ -568,6 +568,16 @@
     }
   }
 
+  function escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function appendMessageToDOM(msg) {
     DOM.emptyChatState.style.display = 'none';
 
@@ -579,19 +589,23 @@
     const bubbleBg = isOutgoing ? '#7367f0' : '#f1f0f2';
     const textColor = isOutgoing ? '#ffffff' : '#33303c';
 
+    const safeText = escapeHTML(msg.text);
+    const safeSenderName = escapeHTML(msg.senderName);
+    const safeFileName = escapeHTML(msg.fileName);
+
     messageLi.innerHTML = `
       <div class="d-flex overflow-hidden ${isOutgoing ? 'justify-content-end' : ''}">
         ${!isOutgoing ? `
           <div class="user-avatar flex-shrink-0 me-3">
             <div class="avatar avatar-sm" style="width:38px; height:38px;">
-              <img src="${msg.senderAvatar}" alt="${msg.senderName}" class="rounded-circle" style="width:38px; height:38px; object-fit:cover;">
+              <img src="${msg.senderAvatar}" alt="${safeSenderName}" class="rounded-circle" style="width:38px; height:38px; object-fit:cover;">
             </div>
           </div>
         ` : ''}
 
         <div class="chat-message-wrapper d-flex flex-column ${isOutgoing ? 'align-items-end' : 'align-items-start'}" style="max-width: 65%;">
           <div class="chat-message-text" style="background: ${bubbleBg}; color: ${textColor}; padding: 10px 16px; border-radius: 8px; display: inline-block; width: fit-content; max-width: 100%; word-break: break-word;">
-            ${msg.text ? `<p class="mb-0 status-title-text">${msg.text}</p>` : ''}
+            ${safeText ? `<p class="mb-0 status-title-text">${safeText}</p>` : ''}
             ${msg.image ? `
               <div class="mt-2">
                 <img src="${msg.image}" class="img-fluid rounded" style="max-height: 250px; display: block;">
@@ -602,10 +616,10 @@
             ` : ''}
             ${msg.isFile ? `
               <div class="p-2 rounded bg-white text-dark border mt-1">
-                <div class="fw-semibold small">${msg.fileName}</div>
+                <div class="fw-semibold small">${safeFileName}</div>
                 <div class="small text-muted">${(msg.fileSize / 1024).toFixed(1)} KB</div>
                 ${msg.fileUrl ? `
-                  <a href="${msg.fileUrl}" download="${msg.fileName}" class="btn btn-sm btn-primary mt-2 d-inline-flex align-items-center gap-1">
+                  <a href="${msg.fileUrl}" download="${safeFileName}" class="btn btn-sm btn-primary mt-2 d-inline-flex align-items-center gap-1">
                     <i class="icon-base ti tabler-download fs-6"></i> Download File
                   </a>
                 ` : `
