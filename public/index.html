@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en" class="light-style layout-menu-fixed layout-compact" dir="ltr" data-theme="theme-default" data-assets-path="/assets/" data-template="vertical-menu-template">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <title>Vuexy - Chat & Authentication</title>
+  
+  <link rel="icon" type="image/x-icon" href="/assets/img/favicon/favicon.ico">
+
+  <!-- Fonts & Icons -->
+  <link rel="stylesheet" href="/assets/vendor/fonts/iconify-icons.css">
+  <link rel="stylesheet" href="/assets/vendor/fonts/flag-icons.css">
+
+  <!-- Core CSS -->
+  <link rel="stylesheet" href="/assets/vendor/libs/node-waves/node-waves.css">
+  <link rel="stylesheet" href="/assets/vendor/css/core.css">
+  <link rel="stylesheet" href="/assets/css/demo.css">
+  <link rel="stylesheet" href="/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css">
+  <link rel="stylesheet" href="/assets/vendor/css/pages/page-auth.css">
+  <link rel="stylesheet" href="/assets/vendor/css/pages/app-chat.css">
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Helpers & Config -->
+  <script src="/assets/vendor/js/helpers.js"></script>
+  <script src="/assets/js/config.js"></script>
+
+  <!-- Socket.IO Client -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+
+<body>
+
+  <div class="app-container">
+
+    <!-- ==================================================================== -->
+    <!-- VIEW 1: VUEXY LOGIN SCREEN                                           -->
+    <!-- ==================================================================== -->
+    <div id="login-view" class="spa-view active">
+      <div class="auth-page-container">
+        <div class="auth-card">
+          
+          <div class="app-brand justify-content-center mb-4">
+            <a href="#" class="app-brand-link">
+              <span class="app-brand-logo demo">
+                <svg width="32" height="22" viewBox="0 0 32 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M0.00172773 0V6.85398C0.00172773 6.85398 -0.133178 9.01207 1.98092 10.8388L13.6912 21.9964L19.7809 21.9964L31.898 10.8388C34.0121 9.01207 33.8772 6.85398 33.8772 6.85398V0H0.00172773Z" fill="#7367F0"/>
+                </svg>
+              </span>
+              <span class="app-brand-text demo menu-text fw-bold text-heading ms-2">Vuexy</span>
+            </a>
+          </div>
+
+          <h4 class="mb-1 text-center text-heading fw-bold">Welcome to Vuexy! 👋</h4>
+          <p class="mb-4 text-center text-body-secondary" style="font-size:0.875rem;">Enter your details to join real-time chat</p>
+
+          <form id="login-form" novalidate>
+            
+            <!-- Avatar Upload (Base64 conversion) -->
+            <div class="text-center">
+              <div id="avatar-preview-wrapper" class="avatar-preview-box" title="Click to upload profile photo">
+                <img id="avatar-preview-img" src="" alt="Avatar Preview">
+                <div id="avatar-placeholder" class="text-muted small">
+                  <i class="icon-base ti tabler-camera icon-24px text-primary"></i>
+                  <div style="font-size:0.7rem; margin-top:2px;">Upload Photo</div>
+                </div>
+                <div id="avatar-badge" class="avatar-badge-text">Base64 Ready</div>
+              </div>
+              <input type="file" id="avatar-file-input" accept="image/*" class="d-none">
+              <div id="avatar-error" class="text-danger small mb-3"></div>
+            </div>
+
+            <!-- Name Field -->
+            <div class="mb-3">
+              <label for="user-name" class="form-label text-heading">Full Name</label>
+              <div class="input-group input-group-merge">
+                <span class="input-group-text"><i class="icon-base ti tabler-user"></i></span>
+                <input type="text" id="user-name" class="form-control" placeholder="Enter your full name" autocomplete="off" required>
+              </div>
+              <div id="name-error" class="text-danger small mt-1"></div>
+            </div>
+
+            <!-- Email Field -->
+            <div class="mb-4">
+              <label for="user-email" class="form-label text-heading">Email Address</label>
+              <div class="input-group input-group-merge">
+                <span class="input-group-text"><i class="icon-base ti tabler-mail"></i></span>
+                <input type="email" id="user-email" class="form-control" placeholder="Enter your email" autocomplete="off" required>
+              </div>
+              <div id="email-error" class="text-danger small mt-1"></div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="login-submit-btn" class="btn btn-primary w-100" disabled>
+              <span>Sign In & Chat</span>
+              <i class="icon-base ti tabler-arrow-right icon-16px ms-2"></i>
+            </button>
+
+          </form>
+
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================================================================== -->
+    <!-- VIEW 2: VUEXY CHATTING SCREEN (100vw x 100vh Full Screen)            -->
+    <!-- ==================================================================== -->
+    <div id="chat-view" class="spa-view">
+      <div class="app-chat-full">
+
+        <!-- Sidebar Left: Contact List -->
+        <aside class="app-chat-sidebar-left">
+          
+          <!-- User Header -->
+          <div class="chat-sidebar-header">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0 avatar avatar-online me-3" style="width:38px !important; height:38px !important;">
+                <img id="my-avatar" class="rounded-circle" src="/assets/img/avatars/1.png" alt="Avatar" style="width:38px !important; height:38px !important; object-fit:cover;">
+              </div>
+              <div class="overflow-hidden">
+                <h6 id="my-name" class="mb-0 fw-semibold text-heading text-truncate" style="font-size:0.9rem;">User</h6>
+                <small id="my-email" class="text-body-secondary text-truncate d-block" style="font-size:0.75rem;">user@example.com</small>
+              </div>
+            </div>
+            
+            <button id="logout-btn" class="btn btn-icon btn-text-secondary rounded-pill" title="Logout">
+              <i class="icon-base ti tabler-logout icon-20px"></i>
+            </button>
+          </div>
+
+          <!-- Tabs: Chats vs Rooms -->
+          <div class="p-3 border-bottom d-flex gap-2">
+            <button id="tab-users" class="btn btn-sm btn-primary flex-fill">Chats</button>
+            <button id="tab-rooms" class="btn btn-sm btn-outline-secondary flex-fill">Rooms</button>
+          </div>
+
+          <!-- Search -->
+          <div class="px-3 py-2 border-bottom">
+            <div class="input-group input-group-merge">
+              <span class="input-group-text"><i class="icon-base ti tabler-search icon-xs"></i></span>
+              <input type="text" id="sidebar-search-input" class="form-control chat-search-input" placeholder="Search contacts..." aria-label="Search...">
+            </div>
+          </div>
+
+          <!-- Contacts Body -->
+          <div class="sidebar-body-container">
+            <ul class="list-unstyled mb-0" id="sidebar-user-list">
+              <!-- Rendered dynamically -->
+            </ul>
+
+            <ul class="list-unstyled mb-0" id="sidebar-room-list" style="display: none;">
+              <!-- Rendered dynamically -->
+            </ul>
+          </div>
+
+          <div class="p-3 border-top">
+            <button id="open-create-room-modal" class="btn btn-primary w-100">
+              <i class="icon-base ti tabler-plus icon-16px me-2"></i>Create New Room
+            </button>
+          </div>
+
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="app-chat-main-area">
+
+          <!-- Chat Header -->
+          <header class="chat-history-header">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0 avatar avatar-online me-3" id="active-chat-avatar-wrap" style="display:none; width:38px !important; height:38px !important;">
+                <img id="active-chat-avatar" src="/assets/img/avatars/4.png" alt="Avatar" class="rounded-circle" style="width:38px !important; height:38px !important; object-fit:cover;">
+              </div>
+              <div class="overflow-hidden">
+                <h6 id="active-chat-title" class="m-0 fw-semibold text-heading text-truncate" style="font-size:0.95rem;">Select a conversation</h6>
+                <small id="active-chat-sub" class="text-body-secondary text-truncate d-block" style="font-size:0.75rem;">Choose a user or room from the left panel</small>
+              </div>
+            </div>
+          </header>
+
+          <!-- Chat History Body -->
+          <div id="messages-area" class="chat-history-body">
+            <div id="empty-chat-state" class="text-center my-auto py-12">
+              <i class="icon-base ti tabler-messages icon-64px text-primary mb-3 opacity-50"></i>
+              <h5 class="mb-2 text-heading">No Active Conversation</h5>
+              <p class="text-body-secondary small">Select an online contact or join a room from the sidebar to start messaging.</p>
+            </div>
+          </div>
+
+          <!-- Chat History Footer Form -->
+          <footer class="chat-history-footer">
+            <form id="chat-input-form" class="w-100 d-flex justify-content-between align-items-center">
+              <input id="message-text-input" class="form-control message-input border-0 me-3 shadow-none" placeholder="Type your message here..." autocomplete="off">
+              <div class="d-flex align-items-center gap-2">
+                <label for="file-attachment-input" class="form-label mb-0">
+                  <span id="file-attach-btn" class="btn btn-text-secondary btn-icon rounded-pill cursor-pointer" title="Attach file or image">
+                    <i class="icon-base ti tabler-paperclip icon-22px text-heading"></i>
+                  </span>
+                  <input type="file" id="file-attachment-input" hidden>
+                </label>
+                <button type="submit" id="send-msg-btn" class="btn btn-primary d-flex align-items-center px-4">
+                  <span class="d-md-inline-block d-none me-2">Send</span>
+                  <i class="icon-base ti tabler-send icon-16px"></i>
+                </button>
+              </div>
+            </form>
+          </footer>
+
+        </main>
+
+      </div>
+    </div>
+
+    <!-- Create Room Modal -->
+    <div id="create-room-modal" class="modal fade" tabindex="-1" style="display: none;" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content" style="background:#2f3349; border:1px solid rgba(75,70,92,0.2);">
+          <div class="modal-header border-bottom" style="border-color:rgba(75,70,92,0.2) !important;">
+            <h5 class="modal-title text-heading">Create Chat Room</h5>
+            <button type="button" class="btn-close" id="close-room-modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="new-room-name" class="form-label text-heading">Room Name</label>
+              <input type="text" id="new-room-name" class="form-control" placeholder="e.g. Developers, General">
+            </div>
+          </div>
+          <div class="modal-footer border-top" style="border-color:rgba(75,70,92,0.2) !important;">
+            <button type="button" id="cancel-create-room-btn" class="btn btn-outline-secondary">Cancel</button>
+            <button type="button" id="confirm-create-room-btn" class="btn btn-primary">Create Room</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Core JS -->
+  <script src="/assets/vendor/libs/jquery/jquery.js"></script>
+  <script src="/assets/vendor/libs/popper/popper.js"></script>
+  <script src="/assets/vendor/js/bootstrap.js"></script>
+  <script src="/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+
+  <!-- Application Logic -->
+  <script src="/public/app.js"></script>
+</body>
+</html>
