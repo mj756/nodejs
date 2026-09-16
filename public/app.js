@@ -335,7 +335,9 @@
 
     socket.on('roomCreated', (data) => {
       socket.emit('getRooms');
-      selectChatTarget('room', data.roomName, `# ${data.roomName}`);
+      if (data && data.roomName && data.creatorId === state.currentUser.socketId) {
+        selectChatTarget('room', data.roomName, `# ${data.roomName}`);
+      }
     });
 
     socket.on('roomJoined', (data) => socket.emit('getRooms'));
@@ -568,9 +570,15 @@
               <div class="p-2 rounded bg-white text-dark border mt-1">
                 <div class="fw-semibold small">${msg.fileName}</div>
                 <div class="small text-muted">${(msg.fileSize / 1024).toFixed(1)} KB</div>
-                <div class="progress mt-1" style="height: 4px;">
-                  <div class="progress-bar bg-success" id="progress-${msg.uploadId}" style="width: ${msg.progress || 0}%;"></div>
-                </div>
+                ${msg.fileUrl ? `
+                  <a href="${msg.fileUrl}" download="${msg.fileName}" class="btn btn-sm btn-primary mt-2 d-inline-flex align-items-center gap-1">
+                    <i class="icon-base ti tabler-download fs-6"></i> Download File
+                  </a>
+                ` : `
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-success" id="progress-${msg.uploadId}" style="width: ${msg.progress || 0}%;"></div>
+                  </div>
+                `}
               </div>
             ` : ''}
           </div>
@@ -835,48 +843,93 @@
       return;
     }
 
-    const uploadId = `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    const messageObj = {
-      id: uploadId,
-      senderId: state.currentUser.socketId,
-      senderName: state.currentUser.name,
-      senderAvatar: state.currentUser.avatar,
-      text: `Sending file: ${file.name}`,
-      isFile: true,
-      uploadId: uploadId,
-      fileName: file.name,
-      fileSize: file.size,
-      progress: 0,
-      timestamp: timeStr,
-      isOutgoing: true
-    };
-
     const targetKey = state.activeChat.targetId;
-    if (!state.chatLogs.has(targetKey)) state.chatLogs.set(targetKey, []);
-    state.chatLogs.get(targetKey).push(messageObj);
-    appendMessageToDOM(messageObj);
 
-    const targetEmail = state.activeChat.targetEmail || (state.users.get(targetKey) ? state.users.get(targetKey).userId : targetKey);
-    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    if (state.activeChat.targetType === 'room') {
+      const reader = new FileReader();
+      reader.onload = function (evt) {
+        const fileDataUrl = evt.target.result;
+        const isImage = file.type.startsWith('image/');
 
-    state.activeUploads.set(uploadId, {
-      file: file,
-      chunkSize: CHUNK_SIZE,
-      chunkIndex: 0,
-      totalChunks: totalChunks,
-      receiverId: targetEmail
-    });
+        const messageObj = {
+          id: Date.now() + Math.random(),
+          senderId: state.currentUser.socketId,
+          senderName: state.currentUser.name,
+          senderAvatar: state.currentUser.avatar,
+          text: isImage ? `Sent image: ${file.name}` : `Sent file: ${file.name}`,
+          image: isImage ? fileDataUrl : null,
+          isFile: !isImage,
+          fileName: file.name,
+          fileSize: file.size,
+          fileUrl: fileDataUrl,
+          progress: 100,
+          timestamp: timeStr,
+          isOutgoing: true
+        };
 
-    state.socket.emit('fileStart', {
-      uploadId: uploadId,
-      senderId: state.currentUser.email,
-      receiverId: targetEmail,
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type || 'application/octet-stream'
-    });
+        if (!state.chatLogs.has(targetKey)) state.chatLogs.set(targetKey, []);
+        state.chatLogs.get(targetKey).push(messageObj);
+        appendMessageToDOM(messageObj);
+
+        state.socket.emit('sendMessage', {
+          roomName: targetKey,
+          senderId: state.currentUser.socketId,
+          message: {
+            senderName: state.currentUser.name,
+            senderAvatar: state.currentUser.avatar,
+            text: isImage ? `Sent image: ${file.name}` : `Sent file: ${file.name}`,
+            image: isImage ? fileDataUrl : null,
+            isFile: !isImage,
+            fileName: file.name,
+            fileSize: file.size,
+            fileUrl: fileDataUrl,
+            timestamp: timeStr
+          }
+        });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      const uploadId = `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      const messageObj = {
+        id: uploadId,
+        senderId: state.currentUser.socketId,
+        senderName: state.currentUser.name,
+        senderAvatar: state.currentUser.avatar,
+        text: `Sending file: ${file.name}`,
+        isFile: true,
+        uploadId: uploadId,
+        fileName: file.name,
+        fileSize: file.size,
+        progress: 0,
+        timestamp: timeStr,
+        isOutgoing: true
+      };
+
+      if (!state.chatLogs.has(targetKey)) state.chatLogs.set(targetKey, []);
+      state.chatLogs.get(targetKey).push(messageObj);
+      appendMessageToDOM(messageObj);
+
+      const targetEmail = state.activeChat.targetEmail || (state.users.get(targetKey) ? state.users.get(targetKey).userId : targetKey);
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+      state.activeUploads.set(uploadId, {
+        file: file,
+        chunkSize: CHUNK_SIZE,
+        chunkIndex: 0,
+        totalChunks: totalChunks,
+        receiverId: targetEmail
+      });
+
+      state.socket.emit('fileStart', {
+        uploadId: uploadId,
+        senderId: state.currentUser.email,
+        receiverId: targetEmail,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type || 'application/octet-stream'
+      });
+    }
 
     DOM.fileInput.value = '';
   });

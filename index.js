@@ -176,9 +176,10 @@ io.on('connection', (socket) => {
     // Creator automatically joins Socket.IO room
     socket.join(roomName);
 
-    // Only creator gets this
-    socket.emit('roomCreated', {
-      roomName
+    // Broadcast to ALL users so the new room is visible immediately
+    io.emit('roomCreated', {
+      roomName,
+      creatorId: socket.id
     });
   });
 
