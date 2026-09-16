@@ -228,6 +228,11 @@
   DOM.emailInput.addEventListener('input', validateForm);
 
   function showView(viewName) {
+    const hasSession = localStorage.getItem('smart_chat_user');
+    if (viewName === 'login' && (state.isConnected || hasSession)) {
+      viewName = 'chat';
+    }
+
     if (viewName === 'login') {
       DOM.loginView.classList.add('active');
       DOM.chatView.classList.remove('active');
@@ -235,6 +240,35 @@
       DOM.loginView.classList.remove('active');
       DOM.chatView.classList.add('active');
     }
+  }
+
+  function checkSavedSession() {
+    const savedUserStr = localStorage.getItem('smart_chat_user');
+    if (!savedUserStr) return false;
+
+    try {
+      const savedUser = JSON.parse(savedUserStr);
+      if (savedUser && savedUser.email && savedUser.name) {
+        state.currentUser.userId = savedUser.email;
+        state.currentUser.name = savedUser.name;
+        state.currentUser.email = savedUser.email;
+        state.currentUser.avatar = savedUser.avatar || generateDefaultAvatar(savedUser.name);
+
+        DOM.nameInput.value = savedUser.name;
+        DOM.emailInput.value = savedUser.email;
+        DOM.myAvatar.src = state.currentUser.avatar;
+        DOM.myName.textContent = savedUser.name;
+        DOM.myEmail.textContent = savedUser.email;
+
+        initSocketConnection();
+        showView('chat');
+        return true;
+      }
+    } catch (err) {
+      console.error('[Session] Error restoring session:', err);
+      localStorage.removeItem('smart_chat_user');
+    }
+    return false;
   }
 
   // --------------------------------------------------------------------------
@@ -772,6 +806,13 @@
     state.currentUser.email = email;
     state.currentUser.avatar = finalAvatar;
 
+    localStorage.setItem('smart_chat_user', JSON.stringify({
+      userId: email,
+      name: name,
+      email: email,
+      avatar: finalAvatar
+    }));
+
     DOM.myAvatar.src = finalAvatar;
     DOM.myName.textContent = name;
     DOM.myEmail.textContent = email;
@@ -995,11 +1036,16 @@
   });
 
   DOM.logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('smart_chat_user');
     if (state.socket) {
       state.socket.emit('left');
       state.socket.disconnect();
     }
+    state.isConnected = false;
     showView('login');
   });
+
+  // Auto-check and restore session on page load/refresh
+  checkSavedSession();
 
 })();
