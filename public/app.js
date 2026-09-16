@@ -814,6 +814,13 @@
     if (e.target.files.length === 0 || !state.activeChat.targetId) return;
     const file = e.target.files[0];
 
+    const MAX_CHAT_FILE_SIZE = 5 * 1024 * 1024; // 5 MB Limit
+    if (file.size > MAX_CHAT_FILE_SIZE) {
+      alert(`File size exceeds 5 MB limit. Selected file size: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
+      DOM.fileInput.value = '';
+      return;
+    }
+
     const uploadId = `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -874,10 +881,15 @@
     DOM.sidebarUserList.style.display = 'none';
   });
 
+  let roomModalInstance = null;
+
   DOM.createRoomBtn.addEventListener('click', () => {
+    DOM.roomNameInput.value = '';
     if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-      const modal = new bootstrap.Modal(DOM.createRoomModal);
-      modal.show();
+      if (!roomModalInstance) {
+        roomModalInstance = bootstrap.Modal.getOrCreateInstance(DOM.createRoomModal);
+      }
+      roomModalInstance.show();
     } else {
       DOM.createRoomModal.style.display = 'block';
       DOM.createRoomModal.classList.add('show');
@@ -885,8 +897,17 @@
   });
 
   function closeModal() {
+    if (roomModalInstance) {
+      roomModalInstance.hide();
+    }
     DOM.createRoomModal.style.display = 'none';
     DOM.createRoomModal.classList.remove('show');
+    
+    // Clean up any stray backdrop elements
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
   }
 
   DOM.cancelCreateRoomBtn.addEventListener('click', closeModal);

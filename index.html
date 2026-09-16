@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
   <title>Vuexy - Chat & Authentication</title>
   
-  <link rel="icon" type="image/x-icon" href="/assets/img/favicon/favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="/assets/img/favicon/favicon.svg">
 
   <!-- Fonts & Icons -->
   <link rel="stylesheet" href="/assets/vendor/fonts/iconify-icons.css">
@@ -213,18 +213,18 @@
     <!-- Create Room Modal -->
     <div id="create-room-modal" class="modal fade" tabindex="-1" style="display: none;" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content" style="background:#2f3349; border:1px solid rgba(75,70,92,0.2);">
-          <div class="modal-header border-bottom" style="border-color:rgba(75,70,92,0.2) !important;">
-            <h5 class="modal-title text-heading">Create Chat Room</h5>
+        <div class="modal-content bg-white shadow-lg border-0 rounded-3">
+          <div class="modal-header border-bottom p-4">
+            <h5 class="modal-title fw-bold text-dark mb-0">Create Chat Room</h5>
             <button type="button" class="btn-close" id="close-room-modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body p-4">
             <div class="mb-3">
-              <label for="new-room-name" class="form-label text-heading">Room Name</label>
+              <label for="new-room-name" class="form-label text-dark fw-semibold">Room Name</label>
               <input type="text" id="new-room-name" class="form-control" placeholder="e.g. Developers, General">
             </div>
           </div>
-          <div class="modal-footer border-top" style="border-color:rgba(75,70,92,0.2) !important;">
+          <div class="modal-footer border-top p-3">
             <button type="button" id="cancel-create-room-btn" class="btn btn-outline-secondary">Cancel</button>
             <button type="button" id="confirm-create-room-btn" class="btn btn-primary">Create Room</button>
           </div>
