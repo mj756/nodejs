@@ -551,6 +551,11 @@
       senderAvatar: msg.senderAvatar || generateDefaultAvatar(msg.senderName),
       text: msg.text || '',
       image: msg.image || null,
+      isFile: msg.isFile || false,
+      fileName: msg.fileName || null,
+      fileSize: msg.fileSize || null,
+      fileUrl: msg.fileUrl || null,
+      progress: msg.progress !== undefined ? msg.progress : (msg.isFile || msg.image ? 100 : 0),
       timestamp: msg.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isOutgoing: false
     };
@@ -901,7 +906,7 @@
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const targetKey = state.activeChat.targetId;
 
-    if (state.activeChat.targetType === 'room') {
+    if (state.activeChat.type === 'room' || state.activeChat.targetType === 'room') {
       const reader = new FileReader();
       reader.onload = function (evt) {
         const fileDataUrl = evt.target.result;
