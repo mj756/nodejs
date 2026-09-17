@@ -7,6 +7,15 @@
   
   <link rel="icon" type="image/svg+xml" href="/assets/img/favicon/favicon.svg">
 
+  <!-- PWA Meta Tags & Web App Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#7367f0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Smart Chat">
+  <link rel="apple-touch-icon" href="/assets/img/icons/pwa/icon-192.png">
+
   <!-- Fonts & Icons -->
   <link rel="stylesheet" href="/assets/vendor/fonts/iconify-icons.css">
   <link rel="stylesheet" href="/assets/vendor/fonts/flag-icons.css">
@@ -112,14 +121,14 @@
     </div>
 
 
-    <!-- ==================================================================== -->
-    <!-- VIEW 2: VUEXY CHATTING SCREEN (100vw x 100vh Full Screen)            -->
-    <!-- ==================================================================== -->
+
     <div id="chat-view" class="spa-view">
       <div class="app-chat-full">
+        <!-- Sidebar Backdrop Overlay for Mobile Screens -->
+        <div id="sidebar-overlay" class="chat-sidebar-overlay"></div>
 
         <!-- Sidebar Left: Contact List -->
-        <aside class="app-chat-sidebar-left">
+        <aside id="app-chat-sidebar-left" class="app-chat-sidebar-left">
           
           <!-- User Header -->
           <div class="chat-sidebar-header">
@@ -133,9 +142,20 @@
               </div>
             </div>
             
-            <button id="logout-btn" class="btn btn-icon btn-text-secondary rounded-pill" title="Logout">
-              <i class="icon-base ti tabler-logout icon-20px"></i>
-            </button>
+            <div class="d-flex align-items-center gap-1">
+              <button id="pwa-install-btn" class="btn btn-icon btn-text-primary rounded-pill me-1" title="Install Smart Chat App" style="display: none;">
+                <i class="icon-base ti tabler-download icon-20px text-primary"></i>
+              </button>
+              <button id="notification-toggle-btn" class="btn btn-icon btn-text-secondary rounded-pill" title="Notification Permission Settings">
+                <i id="notification-toggle-icon" class="icon-base ti tabler-bell icon-20px"></i>
+              </button>
+              <button id="logout-btn" class="btn btn-icon btn-text-secondary rounded-pill" title="Logout">
+                <i class="icon-base ti tabler-logout icon-20px"></i>
+              </button>
+              <button id="sidebar-close-btn" class="btn btn-icon btn-text-secondary rounded-pill d-lg-none ms-1" title="Close Sidebar">
+                <i class="icon-base ti tabler-x icon-20px"></i>
+              </button>
+            </div>
           </div>
 
           <!-- Tabs: Chats vs Rooms -->
@@ -177,6 +197,9 @@
           <!-- Chat Header -->
           <header class="chat-history-header">
             <div class="d-flex align-items-center">
+              <button id="sidebar-toggle-btn" class="btn btn-icon btn-text-secondary me-2 d-lg-none" title="Open Contacts & Rooms">
+                <i class="icon-base ti tabler-menu-2 icon-24px text-heading"></i>
+              </button>
               <div class="flex-shrink-0 avatar avatar-online me-3" id="active-chat-avatar-wrap" style="display:none; width:38px !important; height:38px !important;">
                 <img id="active-chat-avatar" src="/assets/img/avatars/4.png" alt="Avatar" class="rounded-circle" style="width:38px !important; height:38px !important; object-fit:cover;">
               </div>

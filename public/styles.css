@@ -285,27 +285,68 @@ html, body {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Responsive Design                                                          */
+/* Responsive Design & Mobile Drawer System                                   */
 /* -------------------------------------------------------------------------- */
 
-@media (max-width: 768px) {
-  .app-chat-sidebar-left {
-    width: 280px !important;
-    min-width: 280px !important;
+@media (min-width: 992px) {
+  .d-lg-none {
+    display: none !important;
   }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 991.98px) {
   .app-chat-sidebar-left {
-    position: absolute;
-    left: -100%;
-    top: 0;
-    bottom: 0;
-    z-index: 50;
+    position: absolute !important;
+    left: -100% !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    z-index: 1050 !important;
     width: 85% !important;
-    transition: left 0.3s ease;
+    max-width: 320px !important;
+    box-shadow: 4px 0 24px rgba(75, 70, 92, 0.18) !important;
+    transition: left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
   }
+  
   .app-chat-sidebar-left.show {
+    left: 0 !important;
+  }
+
+  .chat-sidebar-overlay {
+    display: none;
+    position: absolute;
+    top: 0;
     left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(51, 48, 60, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 1040;
+    transition: opacity 0.3s ease;
+  }
+
+  .chat-sidebar-overlay.show {
+    display: block !important;
+  }
+
+  .chat-history-header {
+    padding-left: 12px !important;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* High Priority Notification UI System                                       */
+/* -------------------------------------------------------------------------- */
+
+.pulse-bell {
+  animation: bellRing 2s infinite ease-in-out;
+}
+
+@keyframes bellRing {
+  0%, 100% { transform: rotate(0); }
+  10%, 30%, 50% { transform: rotate(15deg); }
+  20%, 40% { transform: rotate(-15deg); }
+  60% { transform: rotate(0); }
+}
+
+
+

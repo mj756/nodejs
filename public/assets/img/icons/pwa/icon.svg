@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pwaBrandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7367f0" />
+      <stop offset="100%" stop-color="#9e95f5" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#pwaBrandGrad)" />
+  <path d="M 160 160 C 112 160 96 192 96 240 C 96 288 128 320 176 320 L 176 376 L 232 320 L 352 320 C 400 320 416 288 416 240 C 416 192 384 160 336 160 Z" fill="#ffffff" />
+  <circle cx="192" cy="240" r="24" fill="#7367f0" />
+  <circle cx="256" cy="240" r="24" fill="#7367f0" />
+  <circle cx="320" cy="240" r="24" fill="#7367f0" />
+</svg>

@@ -69,7 +69,11 @@
     myEmail: document.getElementById('my-email'),
     logoutBtn: document.getElementById('logout-btn'),
 
-    // Sidebar
+    // Sidebar & Mobile Controls
+    sidebarLeft: document.getElementById('app-chat-sidebar-left'),
+    sidebarToggleBtn: document.getElementById('sidebar-toggle-btn'),
+    sidebarCloseBtn: document.getElementById('sidebar-close-btn'),
+    sidebarOverlay: document.getElementById('sidebar-overlay'),
     tabUsersBtn: document.getElementById('tab-users'),
     tabRoomsBtn: document.getElementById('tab-rooms'),
     searchSidebar: document.getElementById('sidebar-search-input'),
@@ -97,7 +101,12 @@
     roomNameInput: document.getElementById('new-room-name'),
     confirmCreateRoomBtn: document.getElementById('confirm-create-room-btn'),
     cancelCreateRoomBtn: document.getElementById('cancel-create-room-btn'),
-    closeRoomModalBtn: document.getElementById('close-room-modal')
+    closeRoomModalBtn: document.getElementById('close-room-modal'),
+
+    // Notifications & PWA
+    notificationToggleBtn: document.getElementById('notification-toggle-btn'),
+    notificationToggleIcon: document.getElementById('notification-toggle-icon'),
+    pwaInstallBtn: document.getElementById('pwa-install-btn')
   };
 
   // Helper: Generate Avatar SVG Data URL
@@ -120,6 +129,157 @@
     ctx.fillText(initials, 60, 64);
 
     return canvas.toDataURL('image/png');
+  }
+
+  // --------------------------------------------------------------------------
+  // High-Priority Notification System
+  // --------------------------------------------------------------------------
+
+  function playHighPriorityNotificationSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      // Two-tone high priority chime (E5 -> A5)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(659.25, now); // E5
+      gain1.gain.setValueAtTime(0.3, now);
+      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.15);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(880.00, now + 0.12); // A5
+      gain2.gain.setValueAtTime(0.35, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.4);
+    } catch (e) {
+      console.warn('[NotificationSound] Audio play error:', e);
+    }
+  }
+
+  function updateNotificationUI() {
+    if (!DOM.notificationToggleIcon) return;
+
+    if (!('Notification' in window)) {
+      DOM.notificationToggleIcon.className = 'icon-base ti tabler-bell-off text-muted icon-20px';
+      return;
+    }
+
+    const permission = Notification.permission;
+    if (permission === 'granted') {
+      DOM.notificationToggleIcon.className = 'icon-base ti tabler-bell-check text-success icon-20px';
+    } else if (permission === 'denied') {
+      DOM.notificationToggleIcon.className = 'icon-base ti tabler-bell-off text-danger icon-20px';
+    } else { // 'default'
+      DOM.notificationToggleIcon.className = 'icon-base ti tabler-bell pulse-bell text-warning icon-20px';
+    }
+  }
+
+  function requestNotificationPermission(autoPrompt = false) {
+    if (!('Notification' in window)) {
+      if (!autoPrompt) alert('Web Notifications are not supported by your browser.');
+      updateNotificationUI();
+      return Promise.resolve('unsupported');
+    }
+
+    if (Notification.permission === 'granted') {
+      updateNotificationUI();
+      return Promise.resolve('granted');
+    }
+
+    if (Notification.permission === 'denied') {
+      if (!autoPrompt) {
+        alert('Notifications are blocked by your browser settings. Please click the lock/settings icon near the URL bar to allow notifications.');
+      }
+      updateNotificationUI();
+      return Promise.resolve('denied');
+    }
+
+    return Notification.requestPermission().then(permission => {
+      updateNotificationUI();
+      if (permission === 'granted') {
+        sendHighPriorityNotification(
+          'High-Priority Notifications Enabled! 🔔',
+          'You will now receive instant, high-priority notifications for incoming messages and file transfers.',
+          { tag: 'system-welcome' }
+        );
+      }
+      return permission;
+    });
+  }
+
+  function sendHighPriorityNotification(title, body, options = {}) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+      console.warn('[Notification] Cannot send notification - permission status:', 'Notification' in window ? Notification.permission : 'unsupported');
+      return null;
+    }
+
+    // Trigger audio chime for high priority alert
+    playHighPriorityNotificationSound();
+
+    const defaultOptions = {
+      body: body || '',
+      icon: options.icon || '/assets/img/favicon/favicon.svg',
+      badge: '/assets/img/favicon/favicon.svg',
+      tag: options.tag || 'smart-chat-msg',
+      renotify: true, // Force sound/vibe on every notification
+      requireInteraction: true, // System-wide high priority: stay on screen until user acts
+      silent: false,
+      vibrate: [200, 100, 200, 100, 200],
+      timestamp: Date.now(),
+      data: options.data || {}
+    };
+
+    // Primary System-Wide approach: ServiceWorkerRegistration showNotification
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready
+        .then((reg) => {
+          return reg.showNotification(title, defaultOptions);
+        })
+        .catch((err) => {
+          console.warn('[Notification] SW showNotification error, using fallback:', err);
+          createFallbackNotification(title, defaultOptions);
+        });
+    } else {
+      createFallbackNotification(title, defaultOptions);
+    }
+  }
+
+  function createFallbackNotification(title, defaultOptions) {
+    try {
+      const notification = new Notification(title, defaultOptions);
+      notification.onclick = function (event) {
+        event.preventDefault();
+        window.focus();
+        const data = defaultOptions.data || {};
+        if (data.targetId && data.type) {
+          if (data.type === 'user') {
+            const userObj = state.users.get(data.targetId) || state.usersByEmail.get(data.targetId);
+            const displayName = userObj ? userObj.name : 'User';
+            selectChatTarget('user', data.targetId, displayName);
+          } else if (data.type === 'room') {
+            selectChatTarget('room', data.targetId, `# ${data.targetId}`);
+          }
+        }
+        notification.close();
+      };
+      return notification;
+    } catch (err) {
+      console.error('[Notification] Fallback notification error:', err);
+      return null;
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -239,6 +399,10 @@
     } else if (viewName === 'chat') {
       DOM.loginView.classList.remove('active');
       DOM.chatView.classList.add('active');
+      updateNotificationUI();
+      if ('Notification' in window && Notification.permission === 'default') {
+        requestNotificationPermission(true);
+      }
     }
   }
 
@@ -435,6 +599,17 @@
         state.unreadCounts.set(targetKey, unread + 1);
         renderSidebarUsers();
       }
+
+      // High-priority notification for incoming file transfer
+      sendHighPriorityNotification(
+        `Incoming File: ${fileName}`,
+        `${senderUser.name || senderId} is sending you a file (${(fileSize / 1024).toFixed(1)} KB)`,
+        {
+          icon: senderUser.avatar || generateDefaultAvatar(senderUser.name),
+          tag: `file-${uploadId}`,
+          data: { targetId: senderSocketId, type: 'user' }
+        }
+      );
     });
 
     socket.on('fileStartAck', (data) => {
@@ -570,6 +745,19 @@
       state.unreadCounts.set(targetKey, currentUnread + 1);
       renderSidebarUsers();
       renderSidebarRooms();
+    }
+
+    // High-priority notification when window is backgrounded or user is on another chat thread
+    const isBackground = document.hidden || !document.hasFocus();
+    const isDifferentChat = state.activeChat.targetId !== targetKey;
+    if (isBackground || isDifferentChat) {
+      const notifTitle = type === 'room' ? `New message in #${roomName}` : `Message from ${messageObj.senderName}`;
+      const notifBody = messageObj.text || (messageObj.isFile ? `Shared file: ${messageObj.fileName}` : (messageObj.image ? 'Sent an image' : 'New message'));
+      sendHighPriorityNotification(notifTitle, notifBody, {
+        icon: messageObj.senderAvatar,
+        tag: `chat-${targetKey}`,
+        data: { targetId: targetKey, type: type }
+      });
     }
   }
 
@@ -781,6 +969,16 @@
     });
   }
 
+  function openMobileSidebar() {
+    if (DOM.sidebarLeft) DOM.sidebarLeft.classList.add('show');
+    if (DOM.sidebarOverlay) DOM.sidebarOverlay.classList.add('show');
+  }
+
+  function closeMobileSidebar() {
+    if (DOM.sidebarLeft) DOM.sidebarLeft.classList.remove('show');
+    if (DOM.sidebarOverlay) DOM.sidebarOverlay.classList.remove('show');
+  }
+
   function selectChatTarget(type, targetId, title, avatar, subtitle, targetEmail) {
     state.activeChat.type = type;
     state.activeChat.targetId = targetId;
@@ -810,6 +1008,9 @@
 
     renderSidebarUsers();
     renderSidebarRooms();
+
+    // Automatically close sidebar on mobile when a chat is selected
+    closeMobileSidebar();
   }
 
   DOM.loginForm.addEventListener('submit', (e) => {
@@ -1066,6 +1267,91 @@
     state.isConnected = false;
     showView('login');
   });
+
+  // --------------------------------------------------------------------------
+  // Notification Event Listeners
+  // --------------------------------------------------------------------------
+
+  if (DOM.notificationToggleBtn) {
+    DOM.notificationToggleBtn.addEventListener('click', () => {
+      requestNotificationPermission(false);
+    });
+  }
+
+  // Initial update of Notification UI
+  updateNotificationUI();
+
+  // --------------------------------------------------------------------------
+  // PWA Service Worker Registration & Installation Prompt
+  // --------------------------------------------------------------------------
+  let deferredPwaPrompt = null;
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => {
+          console.log('[PWA] Service Worker registered successfully with scope:', reg.scope);
+        })
+        .catch((err) => {
+          console.error('[PWA] Service Worker registration failed:', err);
+        });
+    });
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent standard mini-infobar prompt
+    e.preventDefault();
+    deferredPwaPrompt = e;
+    console.log('[PWA] beforeinstallprompt event captured');
+
+    // Display Install App button in sidebar header
+    if (DOM.pwaInstallBtn) {
+      DOM.pwaInstallBtn.style.display = 'inline-flex';
+    }
+  });
+
+  if (DOM.pwaInstallBtn) {
+    DOM.pwaInstallBtn.addEventListener('click', () => {
+      if (!deferredPwaPrompt) {
+        alert('PWA installation prompt is not ready or the app is already installed.');
+        return;
+      }
+
+      deferredPwaPrompt.prompt();
+      deferredPwaPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('[PWA] User accepted the PWA install prompt');
+        } else {
+          console.log('[PWA] User dismissed the PWA install prompt');
+        }
+        deferredPwaPrompt = null;
+        if (DOM.pwaInstallBtn) DOM.pwaInstallBtn.style.display = 'none';
+      });
+    });
+  }
+
+  window.addEventListener('appinstalled', () => {
+    console.log('[PWA] Smart Chat was successfully installed!');
+    deferredPwaPrompt = null;
+    if (DOM.pwaInstallBtn) {
+      DOM.pwaInstallBtn.style.display = 'none';
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // Mobile Responsive Navigation Listeners
+  // --------------------------------------------------------------------------
+  if (DOM.sidebarToggleBtn) {
+    DOM.sidebarToggleBtn.addEventListener('click', openMobileSidebar);
+  }
+
+  if (DOM.sidebarCloseBtn) {
+    DOM.sidebarCloseBtn.addEventListener('click', closeMobileSidebar);
+  }
+
+  if (DOM.sidebarOverlay) {
+    DOM.sidebarOverlay.addEventListener('click', closeMobileSidebar);
+  }
 
   // Auto-check and restore session on page load/refresh
   checkSavedSession();
