@@ -137,7 +137,7 @@
           <!-- User Header -->
           <div class="chat-sidebar-header">
             <div class="d-flex align-items-center">
-              <div class="flex-shrink-0 avatar avatar-online me-3" style="width:38px !important; height:38px !important;">
+              <div class="flex-shrink-0 avatar me-3" style="width:38px !important; height:38px !important;">
                 <img id="my-avatar" class="rounded-circle" src="/assets/img/avatars/1.png" alt="Avatar" style="width:38px !important; height:38px !important; object-fit:cover;">
               </div>
               <div class="overflow-hidden">
@@ -149,9 +149,6 @@
             <div class="d-flex align-items-center gap-1">
               <button id="pwa-install-btn" class="btn btn-icon btn-text-primary rounded-pill me-1" title="Install Smart Chat App" style="display: none;">
                 <i class="icon-base ti tabler-download icon-20px text-primary"></i>
-              </button>
-              <button id="notification-toggle-btn" class="btn btn-icon btn-text-secondary rounded-pill" title="Notification Permission Settings">
-                <i id="notification-toggle-icon" class="icon-base ti tabler-bell icon-20px"></i>
               </button>
               <button id="logout-btn" class="btn btn-icon btn-text-secondary rounded-pill" title="Logout">
                 <i class="icon-base ti tabler-logout icon-20px"></i>
@@ -204,7 +201,7 @@
               <button id="sidebar-toggle-btn" class="btn btn-icon btn-text-secondary me-2 d-lg-none" title="Open Contacts & Rooms">
                 <i class="icon-base ti tabler-menu-2 icon-24px text-heading"></i>
               </button>
-              <div class="flex-shrink-0 avatar avatar-online me-3" id="active-chat-avatar-wrap" style="display:none; width:38px !important; height:38px !important;">
+              <div class="flex-shrink-0 avatar me-3" id="active-chat-avatar-wrap" style="display:none; width:38px !important; height:38px !important;">
                 <img id="active-chat-avatar" src="/assets/img/avatars/4.png" alt="Avatar" class="rounded-circle" style="width:38px !important; height:38px !important; object-fit:cover;">
               </div>
               <div class="overflow-hidden">
@@ -223,8 +220,8 @@
             </div>
           </div>
 
-          <!-- Chat History Footer Form -->
-          <footer class="chat-history-footer">
+          <!-- Chat History Footer Form (Hidden by default until a chat is selected) -->
+          <footer id="chat-history-footer" class="chat-history-footer" style="display: none;">
             <form id="chat-input-form" class="w-100 d-flex justify-content-between align-items-center">
               <input id="message-text-input" class="form-control message-input border-0 me-3 shadow-none" placeholder="Type your message here..." autocomplete="off">
               <div class="d-flex align-items-center gap-2">

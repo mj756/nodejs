@@ -90,6 +90,7 @@
     emptyChatState: document.getElementById('empty-chat-state'),
     
     // Message Composer
+    chatHistoryFooter: document.getElementById('chat-history-footer'),
     chatInputForm: document.getElementById('chat-input-form'),
     messageInput: document.getElementById('message-text-input'),
     fileInput: document.getElementById('file-attachment-input'),
@@ -103,9 +104,7 @@
     cancelCreateRoomBtn: document.getElementById('cancel-create-room-btn'),
     closeRoomModalBtn: document.getElementById('close-room-modal'),
 
-    // Notifications & PWA
-    notificationToggleBtn: document.getElementById('notification-toggle-btn'),
-    notificationToggleIcon: document.getElementById('notification-toggle-icon'),
+    // PWA
     pwaInstallBtn: document.getElementById('pwa-install-btn')
   };
 
@@ -907,7 +906,7 @@
 
       item.innerHTML = `
         <div class="d-flex align-items-center w-100 overflow-hidden">
-          <div class="flex-shrink-0 avatar avatar-online me-3" style="width:38px !important; height:38px !important; min-width:38px !important;">
+          <div class="flex-shrink-0 avatar me-3" style="width:38px !important; height:38px !important; min-width:38px !important;">
             <img src="${avatarSrc}" alt="${user.name}" class="rounded-circle" style="width:38px !important; height:38px !important; object-fit:cover !important;">
           </div>
           <div class="chat-contact-info flex-grow-1 overflow-hidden">
@@ -1004,6 +1003,11 @@
     } else {
       DOM.emptyChatState.style.display = 'none';
       logs.forEach(msg => appendMessageToDOM(msg));
+    }
+
+    // Show the message input box footer when a chat target is selected
+    if (DOM.chatHistoryFooter) {
+      DOM.chatHistoryFooter.style.display = 'flex';
     }
 
     renderSidebarUsers();
@@ -1265,21 +1269,13 @@
       state.socket.disconnect();
     }
     state.isConnected = false;
+    state.activeChat.targetId = null;
+    state.activeChat.type = null;
+    if (DOM.chatHistoryFooter) {
+      DOM.chatHistoryFooter.style.display = 'none';
+    }
     showView('login');
   });
-
-  // --------------------------------------------------------------------------
-  // Notification Event Listeners
-  // --------------------------------------------------------------------------
-
-  if (DOM.notificationToggleBtn) {
-    DOM.notificationToggleBtn.addEventListener('click', () => {
-      requestNotificationPermission(false);
-    });
-  }
-
-  // Initial update of Notification UI
-  updateNotificationUI();
 
   // --------------------------------------------------------------------------
   // PWA Service Worker Registration & Installation Prompt
